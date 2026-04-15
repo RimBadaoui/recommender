@@ -2,32 +2,59 @@
 
 ## Project Summary
 
-In this project you will build and explain a small music recommender system.
-
-Your goal is to:
-
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
-
-Replace this paragraph with your own summary of what your version does.
+This project builds a small music recommender system in Python. It loads a catalog of 15 songs from a CSV file, scores each song against a user taste profile using a weighted rule system, and returns a ranked list of the top recommendations with plain-language explanations. The system demonstrates how simple math can power surprisingly intuitive suggestions — and where bias and limitations still show up.
 
 ---
 
 ## How The System Works
 
-Explain your design in plain language.
+Real-world recommendation systems typically work in two stages: retrieval (narrowing millions of items to a shortlist) followed by ranking (scoring candidates with context-aware logic). This simulation focuses on the **ranking stage**.
 
-Some prompts to answer:
+### Data Flow
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+```
+Input (User Prefs: genre, mood, energy)
+       │
+       ▼
+Load all songs from data/songs.csv
+       │
+       ▼
+For every song — score_song(song, user_prefs)
+  ├── genre match?   → +2.0 points
+  ├── mood match?    → +1.0 point
+  └── energy close?  → +0.0 to +1.0  (1 - |song_energy - target_energy|)
+       │
+       ▼
+Sort all songs by score descending
+       │
+       ▼
+Output: Top K songs with scores and reason strings
+```
 
-You can include a simple diagram or bullet list if helpful.
+### Algorithm Recipe
+
+Genre matches `favorite_genre` : +2.0 |
+Mood matches `favorite_mood` : +1.0 |
+Energy similarity = 1 − \|song_energy − target_energy\| | +0.0 to +1.0 |
+**Max possible score** | **4.0** 
+
+### Song Features Used
+
+`genre`, `mood`, `energy`, `tempo_bpm`, `valence`, `danceability`, `acousticness`, `artist`
+
+### UserProfile Stores
+
+`favorite_genre`, `favorite_mood`, `target_energy`, `likes_acoustic`
+
+### Recommender Scoring
+
+`Recommender.recommend()` calls `_score()` for every song, sorts by score descending, and returns the top k `Song` objects. `explain_recommendation()` returns the same reason string in plain language.
+
+### Potential Biases
+
+- **Genre dominates**: worth +2.0, it can never be overcome by mood + energy alone (+2.0 max combined). A great song in the wrong genre will always rank below a mediocre song in the right genre.
+- **No mood in catalog = no mood points**: the edge-case "sad" profile never earns mood points because no songs have `mood=sad`, so the system silently falls back to genre + energy only.
+- **Artist clustering**: with no diversity rule, the same artist can fill all top-5 slots.
 
 ---
 
@@ -68,38 +95,29 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
-
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+- **Default weights (genre +2.0, mood +1.0, energy +0–1)**: genre dominates. A genre-matched song with wrong mood still beats a mood-matched song in a different genre.
+- **Edge case — conflicting prefs** (`synthwave` genre, `sad` mood, `energy=0.95`): no songs carry `mood=sad`, so the mood rule never fires. The system falls back to genre + energy, and the top results feel tonally wrong — they are high-energy synthwave, not emotionally sad.
+- **Artist clustering**: the rock/intense profile puts two Voltline songs at #1 and #2 with no other artists near them, showing the system has no diversity protection.
 
 ---
 
 ## Limitations and Risks
 
-Summarize some limitations of your recommender.
-
-Examples:
-
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
-
-You will go deeper on this in your model card.
+- Only works on a 15-song catalog — niche genres have 1–2 representatives
+- Does not understand lyrics, tempo feel, or cultural context
+- Over-prioritizes genre: the +2.0 weight means mood and energy together barely compete
+- No diversity rule — same artist can dominate all top slots
+- Cold-start: a new user must describe their taste manually; no learning from history
 
 ---
 
 ## Reflection
 
-Read and complete `model_card.md`:
+Building this system made it clear that recommendations are just math disguised as intuition. Assigning a number to "genre match" and sorting by it produces results that *feel* meaningful — but the weights are arbitrary choices that embed real bias. A genre weight of 2.0 quietly says "genre matters twice as much as mood," which may not be true for every listener.
 
-[**Model Card**](model_card.md)
+The most surprising moment was the edge-case "sad + high energy" profile. No song in the catalog has a sad mood, so the mood rule silently never fires. The system returned high-energy synthwave songs that match nothing about the emotional intent — and it did so with complete confidence, showing no warning. Real AI systems can fail the same way: a missing data category doesn't cause an error, it just produces a quietly wrong answer.
 
-Write 1 to 2 paragraphs here about what you learned:
-
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
+See [model_card.md](model_card.md) and [reflection.md](reflection.md) for full documentation.
 
 
 ---
