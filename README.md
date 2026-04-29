@@ -75,10 +75,15 @@ Energy similarity = 1 − \|song_energy − target_energy\| | +0.0 to +1.0 |
 pip install -r requirements.txt
 ```
 
-3. Run the app:
+3. Set API Key 
 
 ```bash
-python -m src.main
+set GEMINI_API_KEY=YOUR_KEY
+```
+
+4. Run the app:
+```bash
+python main.py --interactive
 ```
 
 ### Running Tests
